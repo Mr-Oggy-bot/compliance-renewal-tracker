@@ -1,0 +1,71 @@
+\documentclass[12pt,letterpaper,twoside,openright]{book}
+% Reconstructed from the supplied PDF; see README.md for the fidelity note.
+\usepackage[OT1]{fontenc}
+\usepackage[utf8]{inputenc}
+\renewcommand{\rmdefault}{cmr}
+\renewcommand{\sfdefault}{cmss}
+\renewcommand{\ttdefault}{cmtt}
+\usepackage[letterpaper,inner=1.5in,outer=1in,top=1.75in,bottom=1in,headheight=15pt,headsep=19.2pt]{geometry}
+\usepackage{graphicx,amsmath,amssymb,booktabs,tabularx,array}
+\usepackage{titlesec,fancyhdr,float,placeins,enumitem,listings,xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.multipart,fit,calc,backgrounds}
+\usepackage[pagebackref,hidelinks]{hyperref}
+\input{metadata}
+\hypersetup{pdftitle={Compliance Renewal Tracker: Project Report},pdfauthor={Student project group},pdfsubject={UCS503 Software Engineering}}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+\raggedbottom
+\setlist{itemsep=3pt,topsep=5pt}
+\renewcommand{\arraystretch}{1.18}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\thepage\quad\CourseTitle}
+\fancyhead[RO]{\CourseTitle\quad\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}}
+\titleformat{\chapter}[display]{\normalfont\bfseries\raggedleft}{\large\chaptertitlename\ \thechapter}{4.8pt}{\huge}[\vspace{5pt}\titlerule]
+\titlespacing*{\chapter}{0pt}{-46.2pt}{36pt}
+\definecolor{ink}{RGB}{38,59,79}
+\definecolor{pale}{RGB}{242,246,249}
+\tikzset{box/.style={draw=ink,rounded corners=2pt,fill=pale,align=center,minimum height=9mm,text width=32mm,font=\sffamily\small,inner sep=4pt},wide/.style={box,text width=44mm},arr/.style={-{Stealth[length=2mm]},draw=ink,thick},line/.style={draw=ink,thick},decision/.style={diamond,draw=ink,fill=pale,aspect=2.3,align=center,font=\sffamily\small,inner sep=1pt},note/.style={font=\sffamily\scriptsize,align=center,fill=white,inner sep=2pt},entity/.style={draw=ink,fill=pale,rectangle split,rectangle split parts=2,rectangle split part align={center,left},text width=43mm,font=\sffamily\small,inner sep=4pt}}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,frame=single,rulecolor=\color{black!25},columns=fullflexible,keepspaces=true,showstringspaces=false,aboveskip=8pt,belowskip=8pt}
+\newcommand{\diagram}[4][0.98\linewidth]{\begin{figure}[H]\centering\begingroup\hyphenpenalty=10000\exhyphenpenalty=10000\resizebox{#1}{!}{\input{diagrams/#2}}\endgroup\caption{#3}\label{#4}\end{figure}}
+\begin{document}
+\begin{titlepage}
+\thispagestyle{empty}
+% Baselines measured from the supplied PDF; independent of body-page geometry.
+\begin{tikzpicture}[remember picture,overlay]
+\tikzset{cover/.style={anchor=base,align=center,inner sep=0pt,text=black}}
+\node[cover,font=\large\bfseries] at ([xshift=324bp,yshift=-170.9bp]current page.north west) {\CourseTitle};
+\node[cover,font=\LARGE\bfseries] at ([xshift=324bp,yshift=-242.1bp]current page.north west) {Compliance Renewal Tracker};
+\node[cover,font=\normalsize] at ([xshift=324bp,yshift=-262.0bp]current page.north west) {Renewal History and Tiered Reminder Management};
+\node[cover,font=\large\bfseries] at ([xshift=324bp,yshift=-375.8bp]current page.north west) {Submitted by:};
+\node[cover,font=\large] at ([xshift=324bp,yshift=-399.4bp]current page.north west) {\StudentOne};
+\node[cover,font=\large] at ([xshift=324bp,yshift=-417.3bp]current page.north west) {\StudentTwo};
+\node[cover,font=\large] at ([xshift=324bp,yshift=-435.2bp]current page.north west) {\StudentThree};
+\node[cover,font=\large] at ([xshift=324bp,yshift=-449.7bp]current page.north west) {\StudentFour};
+\node[cover,font=\normalsize] at ([xshift=324bp,yshift=-478.2bp]current page.north west) {Group: \texttt{\GroupNumber}\quad BE Third Year, CSE};
+\node[cover,font=\large\bfseries] at ([xshift=324bp,yshift=-598.0bp]current page.north west) {Submitted to:};
+\node[cover,font=\normalsize] at ([xshift=324bp,yshift=-618.0bp]current page.north west) {\GuideName};
+\node[cover,font=\large] at ([xshift=324bp,yshift=-692.7bp]current page.north west) {\EvaluationTitle};
+\node[cover,font=\large\bfseries] at ([xshift=324bp,yshift=-712.8bp]current page.north west) {Computer Science and Engineering Department};
+\node[cover,font=\normalsize] at ([xshift=324bp,yshift=-731.4bp]current page.north west) {Thapar Institute of Engineering and Technology, Patiala};
+\end{tikzpicture}
+\null
+\end{titlepage}
+\begingroup\pagestyle{empty}\cleardoublepage\endgroup
+\tableofcontents
+\input{chapters/01-introduction}
+\input{chapters/02-design}
+\input{chapters/03-results}
+\input{chapters/04-conclusion}
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{alpha}
+\bibliography{references}
+\end{document}

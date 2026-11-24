@@ -1,0 +1,25 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\tikzset{process/.style={box,rounded corners=8pt,text width=32mm},store/.style={box,rounded corners=0pt,fill=white,text width=36mm}}
+\node[box,text width=28mm] (user) at (0,8) {Organisation\\member};
+\node[process] (auth) at (5,8) {1.0 Authenticate\\and scope request};
+\node[store] (d1) at (10,8) {D1 Organisations\\and users};
+\node[process] (ledger) at (5,4.3) {2.0 Manage ledger\\and coverage query};
+\node[store] (d2) at (10,4.3) {D2 Obligations\\and instances};
+\node[process] (docs) at (0,.5) {3.0 Manage\\certificate evidence};
+\node[store] (d3) at (0,-2.2) {D3 Documents\\and disk files};
+\node[process] (worker) at (10,.5) {4.0 Process due\\reminders};
+\node[store] (d4) at (5,.5) {D4 Reminders};
+\node[store] (log) at (10,-2.2) {D5 In-memory\\delivery log};
+\draw[arr] (user) -- node[note,above=4mm,text width=22mm]{Credentials / token} (auth);
+\draw[arr,<->] (auth) -- node[note,above=4mm,text width=22mm]{User context} (d1);
+\draw[arr] (auth) -- node[note,right]{Scoped identity} (ledger);
+\draw[arr,<->] (ledger) -- node[note,above=4mm,text width=22mm]{Cycles / dates} (d2);
+\draw[arr] (user.south) -- node[note,above,sloped]{Fields / audit date} (ledger.west);
+\draw[arr] (ledger.north west) -- node[note,above,sloped]{History / summaries} (user.south east);
+\draw[arr,<->] (user) -- node[note,left]{Evidence / file} (docs);
+\draw[arr,<->] (docs) -- node[note,right]{File + metadata} (d3);
+\draw[arr] (ledger) -- node[note,left]{Planned tiers} (d4);
+\draw[arr,<->] (worker) -- node[note,above=4mm,text width=24mm]{Pending / sent state} (d4);
+\draw[arr] (d2) -- node[note,right]{Expiry / cycle} (worker);
+\draw[arr] (worker) -- node[note,right]{Simulated payload} (log);
+\end{tikzpicture}

@@ -1,0 +1,27 @@
+\begin{tikzpicture}[node distance=9mm]
+\node[box,text width=52mm] (start) {Start batch at target date $D$};
+\node[box,text width=52mm,below=of start] (query) {Load pending reminders\\with due\_date $\leq D$};
+\node[decision,text width=29mm,below=of query] (more) {Another row?};
+\node[box,text width=35mm,right=23mm of more] (end) {Return batch counts};
+\node[decision,text width=32mm,below=of more] (crash) {Simulation threshold\\already reached?};
+\node[box,text width=35mm,right=20mm of crash] (throw) {Throw simulated failure\\Completed sends persist};
+\node[decision,text width=29mm,below=of crash] (pending) {Status still\\pending?};
+\node[box,text width=52mm,below=of pending] (send) {Add simulated email payload\\to in-memory log};
+\node[box,text width=52mm,below=of send] (mark) {Set status = sent + timestamp\\Increment processed count};
+\node[box,text width=35mm,left=19mm of send] (failed) {On send error:\\set status = failed};
+\draw[arr] (start) -- (query);
+\draw[arr] (query) -- (more);
+\draw[arr] (more) -- node[note,above]{No} (end);
+\draw[arr] (more) -- node[note,right]{Yes} (crash);
+\draw[arr] (crash) -- node[note,above]{Yes} (throw);
+\draw[arr] (crash) -- node[note,right]{No} (pending);
+\draw[arr] (pending) -- node[note,right]{Yes} (send);
+\draw[arr] (send) -- (mark);
+\draw[arr,dashed] (send) -- (failed);
+\coordinate (loopX) at ($(failed.west)+(-.6,0)$);
+\draw[arr] (mark.west) -- (mark.west -| loopX) |- (more.west);
+\draw[line] (failed.west) -- (failed.west -| loopX);
+\coordinate (skipX) at ($(throw.east)+(1.2,0)$);
+\coordinate (returnY) at ($(more.north)+(0,.7)$);
+\draw[arr] (pending.east) -- (pending.east -| skipX) -- node[note,right]{No: skip} (skipX |- returnY) -- (returnY) -- (more.north);
+\end{tikzpicture}

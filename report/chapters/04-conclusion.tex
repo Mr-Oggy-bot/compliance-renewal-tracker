@@ -1,0 +1,27 @@
+\chapter{Conclusion}
+\section{Summary of Work}
+The project implements a browser-based renewal register with an Express API and a six-table SQLite database. It separates obligations from certificate periods, supports document attachments and historical coverage queries, and presents current renewal attention through dashboard and owner views. Its reminder planner creates fixed tier records, while the worker processes due pending rows and records simulated delivery.
+
+The six existing automated tests passed in an isolated database, and the frontend production build completed. These results support the central ledger and reminder behaviours exercised by those checks. They do not establish full endpoint coverage or production readiness.
+
+\section{Key Findings}
+\begin{itemize}
+\item Separating obligations from instances makes historical coverage queries possible without overwriting earlier certificate dates.
+\item The database uniqueness constraint is an effective guard against repeated reminder planning for the same cycle and tier.
+\item Stored reminder state allows the supplied worker simulation to resume after one completed send; stronger guarantees require atomic claims and a durable delivery design.
+\item Accurate documentation must distinguish the SQLite runtime from the PostgreSQL/Redis configuration and simulated notifications from real email delivery.
+\end{itemize}
+
+\section{Future Work and Recommendations}
+The next development steps should address correctness and access boundaries before adding new dashboard features:
+\begin{enumerate}
+\item Wrap cycle renewal and reminder generation in a transaction; enforce a unique obligation--cycle pair and validate date ranges and allowed frequencies at the API boundary.
+\item Introduce a durable notification outbox, atomic worker claims, retry policy and provider-side idempotency before connecting an email service.
+\item Restrict worker execution and email-log access by organisation and role; protect certificate files through authenticated download routes.
+\item Replace default secrets with deployment configuration, restrict CORS origins and review browser token storage and refresh handling.
+\item Define timezone and month-end rules, exclude irrelevant old-cycle reminders, and clarify whether the dashboard timeline should include overdue items.
+\item Complete the PostgreSQL adapter and container build files if server deployment is required; add endpoint, upload and concurrent-renewal tests.
+\end{enumerate}
+
+\section{Final Remarks}
+The application demonstrates a coherent undergraduate software engineering solution to renewal tracking. Its main contribution is the connection between a standing obligation, successive evidence-bearing cycles and persistent reminder planning. The implementation provides a practical local demonstration, with clearly identified work remaining for robust multi-user deployment.

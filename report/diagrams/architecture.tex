@@ -1,0 +1,16 @@
+\begin{tikzpicture}[node distance=12mm and 13mm]
+\node[box] (user) {Organisation user\\Browser};
+\node[wide,right=of user] (ui) {React interface\\AuthContext + API client};
+\node[wide,below=of ui] (api) {Express REST API\\JWT / tenant / role checks};
+\node[box,below left=13mm and 1mm of api] (db) {SQLite database\\Six related tables};
+\node[box,below right=13mm and 1mm of api] (files) {Local file storage\\PDF / image evidence};
+\node[box,left=of db] (worker) {Reminder worker\\60-second polling};
+\node[box,below=of worker] (log) {Simulated delivery\\Process-local log};
+\draw[arr] (user) -- (ui);
+\draw[arr,<->] (ui) -- node[note,right]{HTTP / JSON\\Bearer token} (api);
+\draw[arr,<->] (api) -- (db);
+\draw[arr,<->] (api) -- (files);
+\draw[arr,<->] (worker) -- (db);
+\draw[arr] (worker) -- (log);
+\draw[arr] (api.west) -| node[note,pos=.2,above]{On-demand batch} (worker.north);
+\end{tikzpicture}

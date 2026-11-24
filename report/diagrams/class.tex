@@ -1,0 +1,15 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[entity,text width=37mm] (org) at (0,7.5) {Organisation\nodepart{second}id: Identifier\\name: String\\timezone: String};
+\node[entity,text width=37mm] (user) at (6.8,7.5) {User\nodepart{second}id: Identifier\\email: String\\role: Role};
+\node[entity,text width=37mm] (ob) at (0,3.8) {Obligation\nodepart{second}id: Identifier\\frequency: Frequency\\leadDays: Integer};
+\node[entity,text width=37mm] (inst) at (6.8,3.8) {RenewalInstance\nodepart{second}cycleNo: Integer\\validFrom, validTo: Date\\certificateNo: String};
+\node[entity,text width=37mm] (rem) at (0,0) {Reminder\nodepart{second}tier: Tier\\dueDate: Date\\status: ReminderStatus};
+\node[entity,text width=37mm] (doc) at (6.8,0) {Document\nodepart{second}fileKey: String\\fileName: String\\uploadedAt: Timestamp};
+\draw[line] (org) -- node[note,above]{1\quad belongs to\quad0..*} (user);
+\draw[line] (org) -- node[note,right]{1\quad0..*} (ob);
+\draw[line] (user.south west) -- node[note,above,sloped]{1\quad owns\quad0..*} (ob.north east);
+\draw[line] (ob) -- node[note,above]{1\quad has\quad0..*} (inst);
+\draw[line] (inst.south west) -- node[note,above,sloped]{1\quad plans\quad0..*} (rem.north east);
+\draw[line] (inst) -- node[note,right]{1\quad0..*} (doc);
+\draw[line] (user.east) -- +(1.2,0) |- node[note,pos=.65,right]{1\quad uploads\\0..*} (doc.east);
+\end{tikzpicture}

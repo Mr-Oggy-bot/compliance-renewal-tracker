@@ -1,0 +1,28 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\foreach \x/\label in {0/{Browser / member},4.4/{API / controller},8.8/{SQLite / planner}} {
+\draw[ink] (\x,-.5) rectangle +(4.4,11.6);
+\node[font=\sffamily\bfseries\small] at (\x+2.2,10.75) {\label};}
+\node[circle,fill=ink,minimum size=3mm] (start) at (2.2,9.9) {};
+\node[box,text width=31mm] (select) at (2.2,8.7) {Select obligation\\Open renewal form};
+\node[box,text width=31mm] (submit) at (2.2,6.9) {Enter certificate / dates\\Submit renewal};
+\node[box,text width=31mm] (auth) at (6.6,6.9) {Verify JWT\\Load tenant obligation};
+\node[decision,text width=22mm] (ok) at (6.6,5.3) {Authorised\\and found?};
+\node[box,text width=31mm] (error) at (2.2,5.3) {Show error response};
+\node[box,text width=31mm] (calc) at (6.6,3.5) {Read latest cycle\\Calculate next dates};
+\node[box,text width=31mm] (write) at (11,3.5) {Update old status\\Insert new instance};
+\node[box,text width=31mm] (plan) at (11,1.7) {Insert reminders\\t30 / t7 / t0};
+\node[box,text width=31mm] (response) at (6.6,1.7) {Return 201 JSON\\New cycle + count};
+\node[box,text width=31mm] (refresh) at (2.2,1.7) {Close form\\Refresh active view};
+\node[circle,double,draw=ink,fill=ink,minimum size=3mm] (end) at (2.2,.2) {};
+\draw[arr] (start) -- (select);
+\draw[arr] (select) -- (submit);
+\draw[arr] (submit) -- (auth);
+\draw[arr] (auth) -- (ok);
+\draw[arr] (ok) -- node[note,above]{No} (error);
+\draw[arr] (ok) -- node[note,right]{Yes} (calc);
+\draw[arr] (calc) -- (write);
+\draw[arr] (write) -- (plan);
+\draw[arr] (plan) -- (response);
+\draw[arr] (response) -- (refresh);
+\draw[arr] (refresh) -- (end);
+\end{tikzpicture}

@@ -1,0 +1,12 @@
+{
+  "name": "compliance-renewal-tracker-monorepo",
+  "version": "1.0.0",
+  "description": "Compliance Renewal Tracker - Append-only Ledger & Idempotent Reminder Engine",
+  "scripts": {
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "worker": "npm --prefix backend run worker"
+  }
+}

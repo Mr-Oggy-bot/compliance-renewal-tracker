@@ -1,0 +1,19 @@
+\begin{tikzpicture}[node distance=11mm and 13mm]
+\node[wide] (app) {App + AuthContext\\Session, tabs and modal state};
+\node[wide,below left=11mm and 2mm of app] (views) {Pages + modals\\Dashboard / ledger / tasks};
+\node[wide,below right=11mm and 2mm of app] (client) {api/client.js\\fetch + Bearer header};
+\node[wide,below=of client] (routes) {server.js + routes/api.js\\Middleware + endpoint mapping};
+\node[wide,left=of routes] (controllers) {Controllers\\Auth / obligations / documents\\Dashboard};
+\node[wide,below=of controllers] (database) {db/database.js\\query / get / run / exec};
+\node[wide,below=of routes] (reminder) {services/reminderService.js\\Plan + batch processing};
+\node[box,right=of reminder] (daemon) {services/worker.js\\Tick + interval};
+\draw[arr] (app) -- (views);
+\draw[arr] (app) -- (client);
+\draw[arr] (views) -- (client);
+\draw[arr] (client) -- (routes);
+\draw[arr] (routes) -- (controllers);
+\draw[arr] (controllers) -- (database);
+\draw[arr] (controllers) -- (reminder);
+\draw[arr] (reminder) -- (database);
+\draw[arr] (daemon) -- (reminder);
+\end{tikzpicture}

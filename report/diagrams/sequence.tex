@@ -1,0 +1,18 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\foreach \id/\x/\txt in {ui/0/{React form},api/3.5/{API + middleware},ctl/7/{Obligation controller},db/10.5/{SQLite},plan/14/{Reminder planner}} {
+\node[box,text width=27mm,font=\sffamily\footnotesize] (\id) at (\x,0) {\txt};
+\draw[ink,dashed] (\x,-.5) -- (\x,-10.8);}
+\draw[arr] (0,-1.1) -- node[note,above]{POST /obligations/:id/renew + Bearer token} (3.5,-1.1);
+\draw[arr] (3.5,-2) -- node[note,above]{Verify token / reload user} (10.5,-2);
+\draw[arr,dashed] (10.5,-2.7) -- node[note,above]{User + organisation} (3.5,-2.7);
+\draw[arr] (3.5,-3.4) -- node[note,above]{renewObligation(req,res)} (7,-3.4);
+\draw[arr] (7,-4.1) -- node[note,above]{Load scoped obligation + latest cycle} (10.5,-4.1);
+\draw[arr,dashed] (10.5,-4.8) -- node[note,above]{Current records} (7,-4.8);
+\draw[arr] (7,-5.5) -- node[note,above]{UPDATE previous status = renewed} (10.5,-5.5);
+\draw[arr] (7,-6.2) -- node[note,above]{INSERT new active instance} (10.5,-6.2);
+\draw[arr] (7,-7) -- node[note,above]{generateRemindersForInstance(id, expiry)} (14,-7);
+\draw[arr] (14,-7.8) -- node[note,above]{INSERT t30, t7, t0} (10.5,-7.8);
+\draw[arr,dashed] (14,-8.6) -- node[note,above]{Created reminder records} (7,-8.6);
+\draw[arr,dashed] (7,-9.5) -- node[note,above]{201 JSON: instance + reminders\_generated} (0,-9.5);
+\node[note,text width=132mm] at (7,-10.7) {Successful path shown. Middleware may return 401; missing or cross-tenant obligation returns 404.\\The write sequence is not enclosed in an explicit database transaction.};
+\end{tikzpicture}

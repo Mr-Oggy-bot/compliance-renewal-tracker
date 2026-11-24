@@ -1,0 +1,142 @@
+\chapter{Methodology and Design}
+\section{System Architecture}
+The design separates browser presentation, HTTP request handling, relational persistence and reminder processing. The working deployment is a local React/Express application using SQLite; Figure~\ref{fig:architecture} shows these implemented components. No external email provider, Redis queue or PostgreSQL adapter is invoked by the runtime.
+
+\subsection{High-Level Design}
+The React application maintains session and modal state. Its API helper attaches the stored access token to requests under \texttt{/api}. In development, Vite proxies those requests to port 5000. Express routes apply authentication, tenant context and selected role checks before invoking controllers. SQLite stores application records; uploaded certificate files are held on disk.
+\diagram{architecture.tex}{System architecture of the implemented local application.}{fig:architecture}
+
+The methodology is modular: represent the domain as related tables, implement controller operations, expose them through protected routes, and connect React screens to the API. The repository's test suite exercises selected database and service behaviours. It does not document a formal development schedule, so no invented timeline or effort estimate is assigned.
+
+Figure~\ref{fig:modules} maps the actual source modules. React components are functions and backend modules export functions; the application does not implement a class-based service framework.
+\diagram{modules.tex}{Module interaction map; arrows denote calls or imports.}{fig:modules}
+
+\subsection{Technical Stack}
+Table~\ref{tab:stack} summarises the technologies present in the manifests and runtime. The version ranges are declared dependencies, rather than claims about the latest available releases. React supports the component and state model~\cite{react}; Express provides method-based routing and middleware composition~\cite{express}.
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.23\linewidth}Y@{}}\toprule
+Technology & Use in the project\\\midrule
+JavaScript / JSX & Browser components and CommonJS backend modules.\\
+React \texttt{\^{}19.0.0} & Session context, dashboard, lists and modal forms.\\
+Vite \texttt{\^{}6.0.7} & Development server, API proxy and production frontend build.\\
+Node.js / Express \texttt{\^{}4.21.0} & REST API and independent reminder daemon.\\
+SQLite / \texttt{node:sqlite} & Synchronous prepared statements through \texttt{DatabaseSync}.\\
+\texttt{jsonwebtoken}, \texttt{bcryptjs} & Signed access/refresh tokens and password hashing.\\
+Multer, local disk & Multipart uploads of PDF, PNG or JPEG files, up to 10 MiB.\\
+\texttt{lucide-react}, CSS & Interface icons and gothic presentation styles.\\
+\texttt{node:test}, \texttt{node:assert} & Existing automated backend tests.\\\bottomrule
+\end{tabularx}
+\caption{Implemented technology stack.}\label{tab:stack}
+\end{table}
+The backend requires a Node.js release that exposes \texttt{node:sqlite}; the local evaluation used Node.js v24.19.0. The repository has a PostgreSQL schema and Compose services for PostgreSQL and Redis, but \texttt{database.js} always opens SQLite. There is no PostgreSQL client dependency, Redis client or backend Dockerfile in the supplied files. Consequently, the Compose configuration is incomplete deployment scaffolding rather than a verified execution path.
+
+\section{Implementation Details}
+\subsection{Module 1: Core Functionality}
+\paragraph{Authentication and permissions.}
+Registration creates an organisation and user. Login compares the supplied password with a bcrypt hash and returns an access token valid for one day and a refresh token valid for seven days. Authentication verifies the access token and reloads the user from the database, then derives the organisation identifier from that user. The frontend stores the access token in local storage; although a refresh endpoint exists, the browser client does not implement automatic refresh.
+
+Figure~\ref{fig:usecases} distinguishes actual route permissions. Administrators and managers may create obligations; only administrators may delete them. Viewing, renewal, upload and historical enquiry are available to authenticated members of the same organisation. Renewal is not restricted to the assigned owner. Worker execution and email-log access also require authentication, but their service data is global rather than tenant-filtered; this is a limitation discussed in Chapter~3.
+\diagram{usecases.tex}{UML use cases and implemented role permissions.}{fig:usecases}
+
+\paragraph{Obligation and renewal ledger.}
+An obligation stores its title, category, authority, recurrence, lead time and assigned owner. Creation verifies that the owner belongs to the same organisation, inserts the obligation and its first instance, then generates reminders. Renewal reads the highest cycle number, changes that instance's status to \texttt{renewed}, and inserts a new \texttt{active} instance with the next cycle number.
+
+If no dates are supplied, the new cycle starts one day after the previous expiry. Its end date is calculated by adding one, three, 12 or 36 months according to the recurrence, then subtracting one day. JavaScript date arithmetic is used directly, so month-end rollover is not normalised by a dedicated calendar policy. Figure~\ref{fig:activity} describes the working sequence across the interface, API and storage.
+\diagram{activity.tex}{Workflow and UML activity swimlanes for renewing a certificate cycle.}{fig:activity}
+
+The ledger retains previous certificate numbers and validity dates, but is not a strictly append-only or tamper-proof store: previous status is updated, and administrator deletion cascades through linked records. Renewal writes are not enclosed in an explicit transaction, and the schema does not enforce a unique obligation--cycle pair. These details limit atomicity and concurrent-renewal safety.
+
+\paragraph{Historical coverage.}
+The detail endpoint accepts \texttt{asOfDate} and returns all cycles with reminders and documents. A selected date is covered when at least one cycle satisfies the inclusive interval test in Equation~\ref{eq:coverage}. The search uses date strings in ISO format and does not filter on the stored status, allowing a renewed historical cycle to establish earlier coverage.
+\begin{equation}
+\operatorname{covered}(d)=\exists i:\ i.\mathrm{valid\_from}\leq d\leq i.\mathrm{valid\_to}.
+\label{eq:coverage}
+\end{equation}
+This query applies to the selected obligation, not to a legal assessment of the entire organisation. Input date validation is limited, and the API returns the first matching cycle if overlapping intervals exist.
+
+\paragraph{Database design.}
+Figure~\ref{fig:er} shows all six runtime entities and their foreign-key relationships. SQLite represents identifiers and dates as text and active flags as integers. Node's synchronous SQLite API is wrapped by \texttt{query}, \texttt{get}, \texttt{run} and \texttt{exec} helpers~\cite{nodesqlite}. Foreign-key enforcement is explicitly enabled with \texttt{PRAGMA foreign\_keys = ON}, as required by SQLite's connection-level configuration~\cite{sqlite}.
+\diagram{er.tex}{Database schema with primary keys (PK), foreign keys (FK) and cardinalities.}{fig:er}
+
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}Y@{}}\toprule
+Table & Purpose and constraints\\\midrule
+\texttt{organisations} & Name, timezone and creation timestamp; parent tenant record.\\
+\texttt{users} & Organisation FK, name, unique email, password hash; role in admin/manager/owner.\\
+\texttt{obligations} & Organisation and owner FKs; recurrence in monthly/quarterly/yearly/three\_yearly; \texttt{lead\_days} defaults to 30.\\
+\texttt{instances} & Obligation FK, cycle number, dates, status and certificate number. Status in active/expired/renewed.\\
+\texttt{reminders} & Instance FK; tier in t30/t7/t0; pending/sent/failed status; unique instance--tier pair.\\
+\texttt{documents} & Instance and uploader FKs; disk key, original filename and upload timestamp.\\\bottomrule
+\end{tabularx}
+\caption{Stored records and principal constraints.}\label{tab:schema}
+\end{table}
+Deleting an obligation cascades to instances, reminders and document metadata. Deleting a user who owns an obligation is restricted; other declared relationships use cascading deletes. Physical uploaded-file cleanup is not part of obligation deletion. Indexes support organisation lookup, instance lookup, date queries and pending reminder retrieval.
+
+Figure~\ref{fig:class} supplies a UML domain class view of the same concepts. It is an analysis model of stored records, not a claim that these classes exist as JavaScript constructors. Persistence and behaviour are implemented by SQL and exported controller/service functions.
+\diagram{class.tex}{UML domain class model, with conceptual associations rather than runtime classes.}{fig:class}
+
+\paragraph{Data movement and API interaction.}
+Figure~\ref{fig:dfd} traces user input, database records, document content and simulated notification output. The worker selects due reminders across the database, including reminders on previous cycles; there is no cancellation filter for renewed instances.
+\diagram{dfd.tex}{Level-1 data flow diagram of the implemented subsystems.}{fig:dfd}
+
+Figure~\ref{fig:sequence} follows a renewal request from the browser to the response. The middleware rejects missing or invalid tokens before controller execution; organisation matching is then checked when loading the obligation. The three reminder inserts follow the new instance insert.
+\diagram{sequence.tex}{UML sequence and API request--response flow for renewal.}{fig:sequence}
+
+\begin{table}[H]\centering\footnotesize
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.36\linewidth}Y@{}}\toprule
+Endpoint & Input and output\\\midrule
+\texttt{POST /auth/login} & Email/password; user and access/refresh tokens, or 401.\\
+\texttt{POST /auth/register} & Name, email, password, organisation name, optional role; creates account/organisation.\\
+\texttt{POST /auth/refresh} & Refresh token; replacement token pair or 401.\\
+\texttt{GET /auth/me}, \texttt{/auth/users} & Current session details or organisation user list.\\
+\texttt{GET /obligations} & Optional category/ownerId filter; latest cycle with computed traffic.\\
+\texttt{POST /obligations} & Obligation fields and optional initial dates/certificate; IDs and reminder count (201).\\
+\texttt{GET /obligations/:id} & Optional asOfDate; obligation, full cycle details and coverage verdict.\\
+\texttt{POST /obligations/:id/renew} & Optional certificate\_no, valid\_from, valid\_to; new cycle and reminder count (201).\\
+\texttt{DELETE /obligations/:id} & Administrator request; deletes obligation and linked metadata.\\
+\texttt{POST /documents/upload} & Multipart file and instance\_id; document metadata (201).\\
+\texttt{GET /documents/:id/download} & Document ID; named file stream after tenant check.\\
+\texttt{GET /dashboard/summary} & Metrics, latest-cycle records and expiry timeline.\\
+\texttt{GET /dashboard/my-tasks} & Owner's latest cycles joined to pending reminders.\\
+\texttt{POST /dashboard/run-worker} & Optional targetDate/simulateCrashAfter; batch counts or simulated-failure response.\\
+\texttt{GET /dashboard/email-logs} & Current API process's simulated delivery log.\\\bottomrule
+\end{tabularx}
+\caption{Principal API inputs and outputs; paths are relative to \texttt{/api}.}\label{tab:api}
+\end{table}
+Ordinary record lookups return 404 for an ID outside the user's organisation. Role rejection uses 403, authentication failure uses 401, and selected missing fields use 400. Some malformed inputs reach database constraints and return 500 rather than a detailed validation response.
+
+\subsection{Module 2: Secondary Features}
+\paragraph{Reminder planning and working principle.}
+For each cycle ending at date $E$, the planner inserts \texttt{t30}, \texttt{t7} and \texttt{t0} with due dates $E-30$, $E-7$ and $E$. These offsets are fixed; changing an obligation's \texttt{lead\_days} changes dashboard warning classification, not reminder scheduling. The database constraint below prevents a second record for an existing tier:
+\begin{lstlisting}[language=SQL]
+UNIQUE(instance_id, tier)
+\end{lstlisting}
+The planner catches duplicate-constraint errors and continues. This is structural idempotency of planning, not a general guarantee of exactly-once delivery.
+
+The worker runs once on startup and then every 60 seconds, with a process-local flag to avoid overlapping daemon ticks. Each batch selects pending reminders with \texttt{due\_date <= currentDate}, rechecks status, adds a simulated email payload to an in-memory log, and marks the reminder sent with a timestamp. Send errors mark rows failed; later batches select only pending rows, so failed rows have no automatic retry path. Figure~\ref{fig:algorithm} follows this algorithm and its simulation boundary.
+\diagram{algorithm.tex}{Reminder worker algorithm, including the supplied between-send crash simulation.}{fig:algorithm}
+
+The status recheck is a read, not a transactional claim. A real crash between an external send and the status update, or competing worker processes, is outside the supplied restart test. The implementation currently has no external send side effect: ``email delivery'' means creating an in-memory record. A separately launched daemon and the API process have separate logs.
+
+\paragraph{Dashboard and owner tasks.}
+The dashboard uses the highest cycle number per obligation. An absent expiry or an expiry before today is red; an expiry on or before today plus the warning lead time is amber; later expiry is green. The computed \texttt{complianceRate} is the rounded percentage of green obligations, with 100 for an empty set. It therefore measures the share outside the warning window, not the share with unexpired certificates.
+
+The 90-day query includes every expiry on or before the window end, including past dates. It does not impose a lower bound of today. The owner task query returns the owner's latest cycles joined to pending reminders without a due-date filter. A cycle can therefore appear more than once if several reminder tiers are pending, and the task list is not limited to overdue work.
+
+\paragraph{Documents and interface modules.}
+Multer accepts PDF and common image MIME types with a 10 MiB size limit, writes a generated disk filename and links metadata to the instance after checking the organisation. The download controller checks tenant membership before streaming the file. The server also exposes the upload directory as a static path; this bypasses the authenticated download route for someone who knows a file URL and should be removed for deployment.
+
+Table~\ref{tab:ui} connects interface modules to their actual responsibilities. Successful create/renew operations increment a refresh key in \texttt{App}, remounting the active view to fetch updated data.
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.39\linewidth}Y@{}}\toprule
+Module & Responsibility\\\midrule
+\texttt{AuthContext}, \texttt{Login} & Session restoration, login and logout; demo login options.\\
+\texttt{Dashboard}, \texttt{Timeline90Day} & Summary counts, attention status and expiry presentation.\\
+\texttt{ObligationsList} & Search, category filtering and record actions.\\
+\texttt{MyTasks} & Signed-in owner's cycle/reminder view.\\
+\texttt{CreateObligationModal}, \texttt{RenewModal} & Initial registration and subsequent cycle entry.\\
+\texttt{LedgerHistoryModal} & Earlier cycles, certificate links and as-of-date enquiry.\\
+\texttt{UploadModal}, \texttt{WorkerControlModal} & File submission and reminder demonstration controls.\\\bottomrule
+\end{tabularx}
+\caption{Frontend module responsibilities.}\label{tab:ui}
+\end{table}

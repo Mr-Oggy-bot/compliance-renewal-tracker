@@ -1,0 +1,60 @@
+\chapter{Results and Evaluation}
+\section{Testing Methodology}
+Evaluation used an isolated copy of the supplied backend and frontend with their lockfile dependencies. The original application source was not edited. The existing backend suite was executed with Node.js v24.19.0 against a separate SQLite file, followed by a frontend production build. Test fixtures create their own organisations, users, obligations and cycles.
+
+The tests use \texttt{node:test} and assertions directly against database helpers and the reminder service. They cover selected units and their database integration, rather than sending requests through the complete Express middleware chain. Table~\ref{tab:tests} records the observed outcomes and the scope of each check.
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}Y>{\raggedright\arraybackslash}p{0.10\linewidth}@{}}\toprule
+Check & Assertion exercised & Result\\\midrule
+Tenant-scoped query & Querying a second organisation's obligation with the first organisation's ID returns no record. & Pass\\
+Cycle and planning & A cycle produces exactly t30, t7 and t0 reminder rows. & Pass\\
+Reminder uniqueness & A duplicate instance--tier insert is rejected by SQLite. & Pass\\
+Renewal history & Prior certificate remains after status changes to renewed; a second cycle is inserted. & Pass\\
+Worker interruption & Simulated failure after one completed send leaves one sent and two pending; restart leaves all three sent. & Pass\\
+Historical coverage & A date within the stored cycle matches; a date before the first cycle has no match. & Pass\\\bottomrule
+\end{tabularx}
+\caption{Observed results of the repository's existing test suite.}\label{tab:tests}
+\end{table}
+
+The renewal test performs the update and insert directly; it does not call the renewal controller. The tenant test similarly checks a scoped SQL query rather than proving isolation across every route. The worker test throws between completed iterations, after the first reminder's sent status has already been stored. It does not terminate an operating-system process during the interval between dispatch and persistence.
+
+The frontend build used \texttt{vite build}. It transformed 1,846 modules and produced the HTML, CSS and JavaScript bundles successfully. This confirms that the supplied interface compiles with its locked dependency set; it does not establish usability, accessibility or full browser interaction coverage.
+
+\section{Performance Metrics}
+No load test, response-time benchmark, user study or throughput measurement was performed. The supplied template's example latency and accuracy values are illustrative and have not been reused as project results. Table~\ref{tab:observations} contains only observed build/test outcomes or explicit implementation parameters.
+\begin{table}[H]\centering\small
+\begin{tabularx}{\linewidth}{@{}Y>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.25\linewidth}@{}}\toprule
+Measure & Value & Evidence type\\\midrule
+Existing automated tests & 6 passed, 0 failed & Local execution\\
+Frontend production build & Completed & Local execution\\
+Reminder tiers per cycle & 3 & Test and source\\
+Post-interruption state & 1 sent, 2 pending & Existing test assertion\\
+Post-restart state & 3 sent & Existing test assertion\\
+Worker polling interval & 60 seconds & Source configuration\\
+Maximum upload size & 10 MiB & Multer configuration\\
+Response time / throughput & Not measured & No benchmark claim\\\bottomrule
+\end{tabularx}
+\caption{Verified functional outcomes and configured parameters.}\label{tab:observations}
+\end{table}
+
+The test runner's elapsed time and Vite's build duration depend on the host environment and are not application performance metrics. No synthetic success rate or accuracy percentage is inferred from these checks.
+
+\section{Analysis}
+\paragraph{Results and advantages.}
+The checks confirm that the model can retain previous certificate details, prevent duplicate reminder tiers and answer date-coverage enquiries for controlled fixtures. Separating certificate instances from obligations gives history a clear relational structure. Persistent reminder rows also allow the supplied sequential batch simulation to resume without reprocessing reminders already marked sent. The React build shows that the implemented screens and shared components form a compilable frontend.
+
+The interface includes a dashboard, searchable obligation register, owner tasks, renewal and upload forms, historical ledger and reminder control modal. A seeded local instance was prepared for visual evidence, but the available browser capture tool could not verify the active Chrome URL and stopped. No interface screenshots, fabricated outputs or substituted mockups are included. The figures in Chapter~2 are source-derived design diagrams, not captured application output.
+
+\paragraph{Limitations.}
+The main limitations follow directly from the implementation:
+\begin{itemize}
+\item \textbf{Ledger integrity:} renewal changes previous status; administrators can delete an obligation and its linked rows. Multi-statement renewal is not transactional, and duplicate cycle numbers are not prevented by a unique constraint.
+\item \textbf{Reminder delivery:} notification payloads exist only in a process-local array. There is no SMTP integration, durable email audit log, atomic row claim or automatic retry of failed reminders.
+\item \textbf{Access boundaries:} ordinary obligation/document controllers scope records by organisation, but the worker and email-log endpoints use global service state. An authenticated user's worker trigger can process due reminders across organisations.
+\item \textbf{File access and configuration:} the static upload route can expose a known file URL without the document controller's tenant check. Default JWT secrets and unrestricted CORS are suitable only as prototype configuration.
+\item \textbf{Dates and task semantics:} the timezone field is stored but not applied as an organisation-specific scheduling policy. JavaScript month-end arithmetic and limited date validation can admit unexpected ranges. Warning lead time and fixed reminder tiers are separate settings.
+\item \textbf{View semantics:} latest-cycle summaries do not test \texttt{valid\_from}; the timeline includes overdue records, and the task join can repeat a cycle for multiple pending tiers. The green-only ``compliance rate'' should not be interpreted as a legal compliance measure.
+\item \textbf{Deployment and evaluation:} PostgreSQL/Redis configuration is not connected to the runtime, container build support is incomplete, and the existing tests do not cover every API, file path or concurrent execution scenario.
+\end{itemize}
+
+These observations do not negate the prototype's demonstrated functions. They define the conditions under which the test results are meaningful and identify concrete improvements for the next iteration.

@@ -1,0 +1,15 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[entity] (org) at (0,8) {organisations\nodepart{second}PK id: TEXT\\name, timezone\\created\_at};
+\node[entity] (usr) at (7.4,8) {users\nodepart{second}PK id: TEXT\\FK org\_id\\name, email (unique)\\password\_hash, role\\created\_at};
+\node[entity] (ob) at (0,3.8) {obligations\nodepart{second}PK id: TEXT\\FK org\_id, owner\_user\_id\\title, category, authority\\frequency, lead\_days\\is\_active, created\_at};
+\node[entity] (inst) at (7.4,3.8) {instances\nodepart{second}PK id: TEXT\\FK obligation\_id\\cycle\_no, valid\_from\\valid\_to, status\\certificate\_no, created\_at};
+\node[entity] (rem) at (0,-1) {reminders\nodepart{second}PK id: TEXT\\FK instance\_id\\tier, due\_date, status\\sent\_at, created\_at\\UQ (instance\_id, tier)};
+\node[entity] (doc) at (7.4,-1) {documents\nodepart{second}PK id: TEXT\\FK instance\_id\\FK uploaded\_by\\file\_key, file\_name\\uploaded\_at};
+\draw[line] (org) -- node[note,above]{1 : 0..*\\contains} (usr);
+\draw[line] (org) -- node[note,right]{1 : 0..*} (ob);
+\draw[line] (usr.south west) -- node[note,above,sloped]{1 : 0..* owns} (ob.north east);
+\draw[line] (ob) -- node[note,above]{1 : 0..*\\has cycles} (inst);
+\draw[line] (inst.south west) -- node[note,above,sloped]{1 : 0..* schedules} (rem.north east);
+\draw[line] (inst) -- node[note,right]{1 : 0..*} (doc);
+\draw[line] (usr.east) -- +(1.1,0) |- node[note,pos=.7,right]{1 : 0..*\\uploads} (doc.east);
+\end{tikzpicture}

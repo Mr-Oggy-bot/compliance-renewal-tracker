@@ -1,0 +1,24 @@
+\chapter{Introduction}
+\noindent\textbf{Abstract.}
+The Compliance Renewal Tracker is a web application for managing licences, certificates and other recurring organisational obligations. It separates an obligation from its dated renewal cycles, retaining earlier certificate details while adding each new cycle. A React interface communicates with an Express API backed by SQLite. The application provides organisation-scoped records, role-based creation and deletion, certificate attachments, historical coverage queries, traffic-light summaries and an owner task view. A reminder service plans notifications at 30 days, seven days and the expiry date; a polling worker records simulated delivery and updates persistent reminder status. Evaluation uses the repository's six existing automated tests, a production frontend build and a local demonstration. The report distinguishes implemented behaviour from deployment intentions: PostgreSQL and Redis are configuration artefacts, email delivery is simulated, and crash recovery has been tested only at the supplied simulation boundary.
+
+\section{Background and Context}
+Organisations often need to renew several independent approvals, each with its own authority, certificate number, expiry date and responsible person. A list of current expiry dates is useful for immediate action, but it cannot by itself explain which certificate covered an earlier date. The project addresses both current renewal work and this historical enquiry.
+
+The repository identifies the application as a UCS503 Software Engineering project at TIET. Its interface uses a gothic visual theme and labels obligations as ``decrees'' and owners as ``wardens''. This report uses the underlying technical terms for clarity. The README and source files are the primary evidence for the implementation described here~\cite{project}.
+
+\subsection{Problem Statement}
+Develop a small web application that records recurring compliance obligations, assigns responsibility, preserves successive certificate periods and identifies renewals requiring attention. The system must also retrieve coverage for a selected historical date, attach evidence to the correct cycle and avoid creating duplicate reminder tiers for the same cycle.
+
+A manually edited spreadsheet or separate calendar reminder can support basic tracking, but linking ownership, certificate evidence, reminder state and historical validity requires additional discipline. The proposed system keeps these related records together. This comparison is a design motivation; no survey or commercial product benchmark was conducted.
+
+\section{Project Objectives}
+\begin{enumerate}
+\item \textbf{Preserve renewal history:} create a separate instance for each cycle and retain the previous cycle's dates and certificate number.
+\item \textbf{Provide controlled access:} authenticate users, scope ordinary record queries to their organisation and restrict obligation creation and deletion by role.
+\item \textbf{Support actionable views:} display latest-cycle traffic-light status, a 90-day expiry view and the signed-in owner's task list.
+\item \textbf{Plan repeatable reminders:} create exactly three tier records per cycle and enforce uniqueness on the instance--tier pair.
+\item \textbf{Support historical evidence:} evaluate whether a selected date lies within any stored cycle and associate uploaded documents with that cycle.
+\end{enumerate}
+
+The submission scope is the implemented local prototype. External regulatory verification, actual email delivery, machine learning and production deployment are outside this scope. Historical coverage means that a stored date interval matches the query; it does not establish a certificate's legal authenticity.
