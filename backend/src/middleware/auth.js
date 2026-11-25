@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config/index.js');
+const config = require('../runtimeSettings.js');
 const { get } = require('../db/database');
 
 async function authenticate(req, res, next) {

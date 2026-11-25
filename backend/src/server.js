@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const config = require('./config/index.js');
+const config = require('./runtimeSettings.js');
 const apiRoutes = require('./routes/api');
 const database = require('./db/database');
 

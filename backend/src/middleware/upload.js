@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const config = require('../config/index.js');
+const config = require('../runtimeSettings.js');
 
 // Ensure uploads directory exists
 if (!process.env.VERCEL && !fs.existsSync(config.UPLOAD_DIR)) {

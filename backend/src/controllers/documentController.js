@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const config = require('../config/index.js');
+const config = require('../runtimeSettings.js');
 const { query, get, run } = require('../db/database');
 
 function uuid() {
