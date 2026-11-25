@@ -1,5 +1,5 @@
 const { DatabaseSync } = require('node:sqlite');
-const config = require('../config');
+const config = require('../config/index.js');
 const path = require('path');
 const fs = require('fs');
 

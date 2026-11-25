@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const config = require('../config');
+const config = require('../config/index.js');
 const { query, get, run } = require('../db/database');
 const { generateTokens } = require('../middleware/auth');
 

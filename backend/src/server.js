@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const config = require('./config');
+const config = require('./config/index.js');
 const apiRoutes = require('./routes/api');
 const database = require('./db/database');
 
@@ -17,7 +17,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static uploads
-app.use('/uploads', express.static(config.UPLOAD_DIR));
+if (!process.env.VERCEL) {
+  app.use('/uploads', express.static(config.UPLOAD_DIR));
+}
 
 // Health check
 app.get('/health', (req, res) => {
