@@ -6,6 +6,7 @@ build/
 *.sqlite3
 .env
 .env.local
+.vercel/
 .env.*.local
 uploads/*
 !uploads/.gitkeep

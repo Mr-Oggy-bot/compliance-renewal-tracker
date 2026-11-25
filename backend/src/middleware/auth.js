@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const { get } = require('../db/database');
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Authentication required: missing Bearer token' });
@@ -12,7 +12,7 @@ function authenticate(req, res, next) {
   try {
     const payload = jwt.verify(token, config.JWT_SECRET);
     // Fetch latest user info from DB
-    const user = get('SELECT id, org_id, name, email, role FROM users WHERE id = ?', [payload.id]);
+    const user = await get('SELECT id, org_id, name, email, role FROM users WHERE id = ?', [payload.id]);
     if (!user) {
       return res.status(401).json({ error: 'User no longer exists' });
     }

@@ -9,6 +9,24 @@ export function LedgerHistoryModal({ obligationId, onClose, onRenewRequest, onUp
   const [auditDate, setAuditDate] = useState('2024-02-15');
   const [auditResult, setAuditResult] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
+
+  const handleDownload = async (doc) => {
+    try {
+      setDownloadError('');
+      const blob = await api.downloadDocument(doc.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.file_name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setDownloadError(error.message);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -69,6 +87,7 @@ export function LedgerHistoryModal({ obligationId, onClose, onRenewRequest, onUp
           </button>
         </div>
 
+        {downloadError && <p role="alert" style={{ color: '#f87171' }}>{downloadError}</p>}
         {loading ? (
           <div style={{ padding: '3.5rem', textAlign: 'center', color: '#9b92a8', fontFamily: "'Cinzel', serif" }}>
             🕯️ Exhuming ancient scrolls from the archives...
@@ -219,15 +238,14 @@ export function LedgerHistoryModal({ obligationId, onClose, onRenewRequest, onUp
                         {inst.documents?.length > 0 ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             {inst.documents.map(doc => (
-                              <a
+                              <button
                                 key={doc.id}
-                                href={`/api/documents/${doc.id}/download`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ color: '#d4af37', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem' }}
+                                type="button"
+                                onClick={() => handleDownload(doc)}
+                                style={{ color: '#d4af37', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem' }}
                               >
                                 <Download size={13} /> {doc.file_name}
-                              </a>
+                              </button>
                             ))}
                           </div>
                         ) : (

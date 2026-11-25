@@ -4,7 +4,7 @@ const fs = require('fs');
 const config = require('../config');
 
 // Ensure uploads directory exists
-if (!fs.existsSync(config.UPLOAD_DIR)) {
+if (!process.env.VERCEL && !fs.existsSync(config.UPLOAD_DIR)) {
   fs.mkdirSync(config.UPLOAD_DIR, { recursive: true });
 }
 
@@ -29,8 +29,9 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  storage: process.env.VERCEL ? multer.memoryStorage() : storage,
+  // Leave room for multipart headers within Vercel's request size limit.
+  limits: { fileSize: (process.env.VERCEL ? 4 : 10) * 1024 * 1024 },
   fileFilter
 });
 

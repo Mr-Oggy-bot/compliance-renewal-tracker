@@ -211,6 +211,22 @@ REFRESH_SECRET=replace-with-another-long-random-value
 
 ## Tests and build
 
+### Vercel hosting
+
+Import this repository with the root directory set to `./`. The root `vercel.json` deploys the Vite frontend and Express backend together. Browser requests to `/api/*` and `/health` reach the backend; other paths reach the frontend. Both use the same domain, so no service binding is needed for browser API calls.
+
+Connect a Neon Postgres database through Vercel Storage and redeploy after setting these project environment variables:
+
+| Variable | Hosted value |
+| --- | --- |
+| `DATABASE_URL` (or `POSTGRES_URL`) | Pooled Neon connection URL, supplied by the integration |
+| `JWT_SECRET`, `REFRESH_SECRET` | Two different randomly generated secrets |
+| `SEED_DEMO_DATA` | `true` to populate demo accounts only when the hosted database has no organisations |
+
+The hosted API initializes its schema automatically. Records and certificate bytes are stored in Postgres; Vercel uploads are limited to 4 MiB. The frontend build sets the matching upload limit. Local development continues to use SQLite and disk uploads when `DATABASE_URL` and `POSTGRES_URL` are absent. The hosted database is separate from your local database.
+
+Notifications remain simulated. On Vercel, trigger reminder batches from the worker control modal; the local worker daemon is not started by the deployment. Its delivery log remains process-local. The demo seed references two example certificates whose PDF contents are not included; new uploads persist normally.
+
 ```bash
 # Existing backend test suite
 npm test
@@ -228,7 +244,7 @@ The six existing tests cover scoped record lookup, cycle creation, reminder uniq
 | **Notifications** | Email delivery is simulated in memory. Reminder status persists in SQLite; the delivery log is local to each process. No SMTP provider is connected. |
 | **Worker recovery** | The supplied test interrupts processing after a completed send. External delivery, competing workers and crashes between dispatch and persistence require a stronger delivery design. |
 | **Date handling** | Reminder tiers use fixed 30/7/0-day offsets. `lead_days` separately controls the dashboard warning window. |
-| **Deployment** | SQLite is the implemented database. PostgreSQL schema and Redis/Compose configuration are included as scaffolding; the adapter and container build setup are incomplete. Use the local setup above. |
+| **Deployment** | Local development uses SQLite. Vercel uses the Postgres adapter and stores certificate bytes in Postgres. The older Docker Compose configuration remains scaffolding. |
 
 This is an academic prototype. The [project report](report/compliance-renewal-tracker-report.pdf) documents the remaining transaction, access-control and deployment limitations.
 

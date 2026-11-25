@@ -66,7 +66,7 @@ async function listObligations(req, res) {
     }
 
     sql += ' ORDER BY o.title ASC';
-    const rows = query(sql, params);
+    const rows = await query(sql, params);
 
     // Compute dynamic compliance status (traffic light)
     const today = formatDate(new Date());
@@ -101,7 +101,7 @@ async function getObligationById(req, res) {
     const { id } = req.params;
     const { asOfDate } = req.query; // Audit query capability!
 
-    const obligation = get(`
+    const obligation = await get(`
       SELECT o.*, u.name as owner_name, u.email as owner_email
       FROM obligations o
       LEFT JOIN users u ON o.owner_user_id = u.id
@@ -113,17 +113,17 @@ async function getObligationById(req, res) {
     }
 
     // Retrieve all instances ordered by cycle_no (The Immutable Ledger)
-    const instances = query(`
+    const instances = await query(`
       SELECT * FROM instances
       WHERE obligation_id = ?
       ORDER BY cycle_no DESC
     `, [id]);
 
     // For each instance, load reminders and documents
-    const instancesWithDetails = instances.map(inst => {
-      const reminders = query('SELECT * FROM reminders WHERE instance_id = ? ORDER BY due_date ASC', [inst.id]);
-      const documents = query(`
-        SELECT d.*, u.name as uploaded_by_name
+    const instancesWithDetails = await Promise.all(instances.map(async inst => {
+      const reminders = await query('SELECT * FROM reminders WHERE instance_id = ? ORDER BY due_date ASC', [inst.id]);
+      const documents = await query(`
+        SELECT d.id, d.instance_id, d.file_key, d.file_name, d.uploaded_by, d.uploaded_at, u.name as uploaded_by_name
         FROM documents d
         LEFT JOIN users u ON d.uploaded_by = u.id
         WHERE d.instance_id = ?
@@ -134,7 +134,7 @@ async function getObligationById(req, res) {
         reminders,
         documents
       };
-    });
+    }));
 
     // If asOfDate audit query is provided (answering viva question: Was org compliant on date X?)
     let auditResult = null;
@@ -181,13 +181,13 @@ async function createObligation(req, res) {
     }
 
     // Verify owner belongs to same tenant
-    const owner = get('SELECT id FROM users WHERE id = ? AND org_id = ?', [owner_user_id, req.org_id]);
+    const owner = await get('SELECT id FROM users WHERE id = ? AND org_id = ?', [owner_user_id, req.org_id]);
     if (!owner) {
       return res.status(400).json({ error: 'Assigned owner does not belong to your organization' });
     }
 
     const obligationId = uuid();
-    run(`
+    await run(`
       INSERT INTO obligations (id, org_id, title, category, authority, frequency, lead_days, owner_user_id, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
     `, [obligationId, req.org_id, title, category, authority, frequency, Number(lead_days), owner_user_id]);
@@ -200,13 +200,13 @@ async function createObligation(req, res) {
     const today = formatDate(new Date());
     const instanceStatus = validTo < today ? 'expired' : 'active';
 
-    run(`
+    await run(`
       INSERT INTO instances (id, obligation_id, cycle_no, valid_from, valid_to, status, certificate_no)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [instanceId, obligationId, 1, validFrom, validTo, instanceStatus, initial_certificate_no || null]);
 
     // Phase 1: Pre-generate reminders for this new instance
-    const reminders = generateRemindersForInstance(instanceId, validTo);
+    const reminders = await generateRemindersForInstance(instanceId, validTo);
 
     return res.status(201).json({
       message: 'Obligation and initial renewal cycle created successfully',
@@ -227,13 +227,13 @@ async function renewObligation(req, res) {
     const { id } = req.params;
     const { certificate_no, valid_from, valid_to } = req.body;
 
-    const obligation = get('SELECT * FROM obligations WHERE id = ? AND org_id = ?', [id, req.org_id]);
+    const obligation = await get('SELECT * FROM obligations WHERE id = ? AND org_id = ?', [id, req.org_id]);
     if (!obligation) {
       return res.status(404).json({ error: 'Obligation not found' });
     }
 
     // Get current latest instance
-    const currentInstance = get(`
+    const currentInstance = await get(`
       SELECT * FROM instances
       WHERE obligation_id = ?
       ORDER BY cycle_no DESC
@@ -244,7 +244,7 @@ async function renewObligation(req, res) {
 
     // Mark previous instance as renewed
     if (currentInstance) {
-      run('UPDATE instances SET status = ? WHERE id = ?', ['renewed', currentInstance.id]);
+      await run('UPDATE instances SET status = ? WHERE id = ?', ['renewed', currentInstance.id]);
     }
 
     // Calculate new validity range
@@ -257,13 +257,13 @@ async function renewObligation(req, res) {
     const newValidTo = valid_to || calculateNextEndDate(newValidFrom, obligation.frequency);
     const newInstanceId = uuid();
 
-    run(`
+    await run(`
       INSERT INTO instances (id, obligation_id, cycle_no, valid_from, valid_to, status, certificate_no)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [newInstanceId, id, newCycleNo, newValidFrom, newValidTo, 'active', certificate_no || null]);
 
     // Pre-create tiered reminders for the new cycle
-    const reminders = generateRemindersForInstance(newInstanceId, newValidTo);
+    const reminders = await generateRemindersForInstance(newInstanceId, newValidTo);
 
     return res.status(201).json({
       message: `Cycle #${newCycleNo} created successfully in append-only ledger`,
@@ -287,11 +287,11 @@ async function renewObligation(req, res) {
 async function deleteObligation(req, res) {
   try {
     const { id } = req.params;
-    const ob = get('SELECT id FROM obligations WHERE id = ? AND org_id = ?', [id, req.org_id]);
+    const ob = await get('SELECT id FROM obligations WHERE id = ? AND org_id = ?', [id, req.org_id]);
     if (!ob) {
       return res.status(404).json({ error: 'Obligation not found' });
     }
-    run('DELETE FROM obligations WHERE id = ?', [id]);
+    await run('DELETE FROM obligations WHERE id = ?', [id]);
     return res.json({ message: 'Obligation and linked records deleted' });
   } catch (err) {
     console.error('deleteObligation error:', err);

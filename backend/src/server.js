@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const config = require('./config');
 const apiRoutes = require('./routes/api');
+const database = require('./db/database');
 
 const app = express();
 
@@ -28,6 +29,9 @@ app.get('/health', (req, res) => {
 });
 
 // API router
+app.use('/api', (req, res, next) => {
+  database.initialize().then(() => next()).catch(next);
+});
 app.use('/api', apiRoutes);
 
 // Global error handler

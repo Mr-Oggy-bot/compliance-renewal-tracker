@@ -1,6 +1,10 @@
 require('dotenv').config();
 const path = require('path');
 
+if (process.env.VERCEL && (!process.env.JWT_SECRET || !process.env.REFRESH_SECRET)) {
+  throw new Error('Set JWT_SECRET and REFRESH_SECRET in the Vercel project environment.');
+}
+
 module.exports = {
   PORT: process.env.PORT || 5000,
   JWT_SECRET: process.env.JWT_SECRET || 'compliance_super_secret_jwt_key_2026',

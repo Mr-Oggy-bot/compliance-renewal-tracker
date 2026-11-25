@@ -18,7 +18,7 @@ async function getDashboardSummary(req, res) {
     const orgId = req.org_id;
 
     // Fetch latest instance for every obligation
-    const items = query(`
+    const items = await query(`
       SELECT o.id, o.title, o.category, o.frequency, o.lead_days, o.owner_user_id,
              u.name as owner_name,
              i.id as instance_id, i.cycle_no, i.valid_from, i.valid_to, i.status as instance_status, i.certificate_no
@@ -93,7 +93,7 @@ async function getDashboardSummary(req, res) {
 async function getMyTasks(req, res) {
   try {
     const today = formatDate(new Date());
-    const tasks = query(`
+    const tasks = await query(`
       SELECT o.id as obligation_id, o.title, o.category, o.frequency, o.lead_days,
              i.id as instance_id, i.cycle_no, i.valid_from, i.valid_to, i.certificate_no,
              r.id as reminder_id, r.tier, r.due_date, r.status as reminder_status

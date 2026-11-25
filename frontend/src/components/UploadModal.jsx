@@ -6,6 +6,7 @@ export function UploadModal({ instanceId, onClose, onUploaded }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const maxFileSizeMB = Number(import.meta.env.VITE_MAX_UPLOAD_MB || 10);
 
   if (!instanceId) return null;
 
@@ -13,6 +14,10 @@ export function UploadModal({ instanceId, onClose, onUploaded }) {
     e.preventDefault();
     if (!file) {
       setError('Please select a certificate parchment (PDF, PNG, JPEG)');
+      return;
+    }
+    if (file.size > maxFileSizeMB * 1024 * 1024) {
+      setError(`Select a file smaller than ${maxFileSizeMB} MB.`);
       return;
     }
 
@@ -58,7 +63,7 @@ export function UploadModal({ instanceId, onClose, onUploaded }) {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1.35rem' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#d4af37', fontFamily: "'Cinzel', serif", marginBottom: '0.4rem' }}>
-              Select Document Parchment (PDF, PNG, JPG &lt; 10MB)
+              Select Document Parchment (PDF, PNG, JPG &lt; {maxFileSizeMB}MB)
             </label>
             <input
               type="file"

@@ -1,4 +1,10 @@
-const { db } = require('./database');
+const database = require('./database');
 
-console.log('Database migrated successfully using node:sqlite schema.');
-process.exit(0);
+(async () => {
+  try {
+    await database.initialize();
+    console.log('Database schema initialized successfully.');
+  } finally {
+    await database.close?.();
+  }
+})().catch(error => { console.error(error.message); process.exitCode = 1; });

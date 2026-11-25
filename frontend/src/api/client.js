@@ -48,6 +48,16 @@ export const api = {
 
   // Documents
   uploadDocument: (formData) => apiRequest('/documents/upload', { method: 'POST', body: formData }),
+  downloadDocument: async (id) => {
+    const response = await fetch(`${API_BASE}/documents/${id}/download`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('compliance_token')}` }
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Download failed');
+    }
+    return response.blob();
+  },
 
   // Dashboard & Worker
   getDashboard: () => apiRequest('/dashboard/summary'),

@@ -16,7 +16,7 @@ function subDays(dateStr, days) {
 }
 
 // Phase 1: Planning - Generate t30, t7, t0 reminder rows upon instance creation
-function generateRemindersForInstance(instanceId, validToDate) {
+async function generateRemindersForInstance(instanceId, validToDate) {
   const tiers = [
     { tier: 't30', dueDate: subDays(validToDate, 30) },
     { tier: 't7', dueDate: subDays(validToDate, 7) },
@@ -27,13 +27,13 @@ function generateRemindersForInstance(instanceId, validToDate) {
   for (const t of tiers) {
     try {
       const id = uuid();
-      run(
+      await run(
         'INSERT INTO reminders (id, instance_id, tier, due_date, status, sent_at) VALUES (?, ?, ?, ?, ?, ?)',
         [id, instanceId, t.tier, t.dueDate, 'pending', null]
       );
       created.push({ id, instance_id: instanceId, tier: t.tier, due_date: t.dueDate, status: 'pending' });
     } catch (err) {
-      if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      if (err.code === '23505' || err.message?.includes('UNIQUE constraint failed')) {
         // Enforce structural idempotency as specified in Section 5.2
         console.warn(`Idempotency enforced: duplicate reminder (${instanceId}, ${t.tier}) rejected by database constraint.`);
       } else {
@@ -58,7 +58,7 @@ async function runReminderWorkerBatch(options = {}) {
   logger(`[ReminderWorker] Starting batch run for target date: ${currentDate}`);
 
   // Fetch pending reminders due today or earlier with full instance & obligation context
-  const pendingRows = query(`
+  const pendingRows = await query(`
     SELECT r.id as reminder_id, r.instance_id, r.tier, r.due_date, r.status,
            i.cycle_no, i.valid_to, i.certificate_no,
            o.id as obligation_id, o.title as obligation_title, o.category,
@@ -91,7 +91,7 @@ async function runReminderWorkerBatch(options = {}) {
     try {
       // Step 2a: Mark claimed / sending
       // Atomically verify status is still pending to avoid race conditions
-      const verify = get('SELECT status FROM reminders WHERE id = ?', [row.reminder_id]);
+      const verify = await get('SELECT status FROM reminders WHERE id = ?', [row.reminder_id]);
       if (!verify || verify.status !== 'pending') {
         skippedAlreadySent++;
         continue;
@@ -116,7 +116,7 @@ async function runReminderWorkerBatch(options = {}) {
       logger(`[ReminderWorker] Email delivered to ${row.owner_email} for "${row.obligation_title}" [Tier: ${row.tier}]`);
 
       // Step 2c: Mark sent with timestamp
-      run('UPDATE reminders SET status = ?, sent_at = ? WHERE id = ?', [
+      await run('UPDATE reminders SET status = ?, sent_at = ? WHERE id = ?', [
         'sent',
         new Date().toISOString(),
         row.reminder_id
@@ -125,7 +125,7 @@ async function runReminderWorkerBatch(options = {}) {
       processedCount++;
     } catch (sendErr) {
       errors++;
-      run('UPDATE reminders SET status = ? WHERE id = ?', ['failed', row.reminder_id]);
+      await run('UPDATE reminders SET status = ? WHERE id = ?', ['failed', row.reminder_id]);
       logger(`[ReminderWorker] Failed to dispatch reminder ${row.reminder_id}: ${sendErr.message}`);
     }
   }

@@ -21,7 +21,7 @@ async function uploadDocument(req, res) {
     }
 
     // Verify instance belongs to user organisation
-    const instance = get(`
+    const instance = await get(`
       SELECT i.id, o.org_id
       FROM instances i
       JOIN obligations o ON i.obligation_id = o.id
@@ -30,14 +30,24 @@ async function uploadDocument(req, res) {
 
     if (!instance) {
       // Remove uploaded file if unauthorized
-      fs.unlinkSync(req.file.path);
+      if (req.file.path) fs.unlinkSync(req.file.path);
       return res.status(404).json({ error: 'Instance not found in your organization' });
     }
 
     const docId = uuid();
+    if (req.file.buffer) {
+      await run(`
+        INSERT INTO documents (id, instance_id, file_key, file_name, uploaded_by, content, mime_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [docId, instance_id, `database/${docId}`, req.file.originalname, req.user.id, req.file.buffer, req.file.mimetype]);
+      return res.status(201).json({
+        message: 'Certificate uploaded and linked to renewal cycle successfully',
+        document: { id: docId, instance_id, file_name: req.file.originalname, size_bytes: req.file.size }
+      });
+    }
     const relativeKey = path.relative(path.join(__dirname, '../../../'), req.file.path).replace(/\\/g, '/');
 
-    run(`
+    await run(`
       INSERT INTO documents (id, instance_id, file_key, file_name, uploaded_by)
       VALUES (?, ?, ?, ?, ?)
     `, [docId, instance_id, relativeKey, req.file.originalname, req.user.id]);
@@ -63,7 +73,7 @@ async function uploadDocument(req, res) {
 async function downloadDocument(req, res) {
   try {
     const { id } = req.params;
-    const doc = get(`
+    const doc = await get(`
       SELECT d.*, o.org_id
       FROM documents d
       JOIN instances i ON d.instance_id = i.id
@@ -76,6 +86,11 @@ async function downloadDocument(req, res) {
     }
 
     const absPath = path.resolve(__dirname, '../../../', doc.file_key);
+    if (doc.content) {
+      res.type(doc.mime_type || 'application/octet-stream');
+      res.attachment(doc.file_name);
+      return res.send(doc.content);
+    }
     if (!fs.existsSync(absPath)) {
       return res.status(404).json({ error: 'File content missing on storage volume' });
     }
